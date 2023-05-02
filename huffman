@@ -1,0 +1,120 @@
+#pragma once
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <queue>
+#include <unordered_map>
+
+using namespace std;
+
+struct Nodo {
+    char caracter;
+    int frecuencia;
+    Nodo* hijoIzquierdo;
+    Nodo* hijoDerecho;
+
+    Nodo(char caracter, int frecuencia) {
+        this->caracter = caracter;
+        this->frecuencia = frecuencia;
+        this->hijoIzquierdo = nullptr;
+        this->hijoDerecho = nullptr;
+    }
+
+    Nodo(Nodo* hijoIzquierdo, Nodo* hijoDerecho) {
+        this->caracter = '\0';
+        this->frecuencia = hijoIzquierdo->frecuencia + hijoDerecho->frecuencia;
+        this->hijoIzquierdo = hijoIzquierdo;
+        this->hijoDerecho = hijoDerecho;
+    }
+};
+
+struct CompararNodos {
+    bool operator()(const Nodo* izquierdo, const Nodo* derecho) {
+        return izquierdo->frecuencia > derecho->frecuencia;
+    }
+};
+
+void codificar(Nodo* raiz, string cadenaCodificada, unordered_map<char, string>& tablaBusqueda) {
+    if (raiz == nullptr) {
+        return;
+    }
+
+    if (raiz->caracter != '\0') {
+        tablaBusqueda[raiz->caracter] = cadenaCodificada;
+    }
+
+    codificar(raiz->hijoIzquierdo, cadenaCodificada + "0", tablaBusqueda);
+    codificar(raiz->hijoDerecho, cadenaCodificada + "1", tablaBusqueda);
+}
+
+string comprimir(string cadenaEntrada, unordered_map<char, string>& tablaBusqueda) {
+    string cadenaComprimida = "";
+
+    for (char caracter : cadenaEntrada) {
+        cadenaComprimida += tablaBusqueda[caracter];
+    }
+
+    return cadenaComprimida;
+}
+
+void escribirArchivo(string nombreArchivoSalida, string cadenaComprimida) {
+    ofstream archivoSalida;
+    archivoSalida.open(nombreArchivoSalida);
+
+    archivoSalida << cadenaComprimida;
+
+    archivoSalida.close();
+}
+
+int main() {
+    string nombreArchivoEntrada;
+    string nombreArchivoSalida;
+
+    cout << "Ingrese el nombre del archivo de texto a comprimir: ";
+    cin >> nombreArchivoEntrada;
+
+    ifstream archivoEntrada;
+    archivoEntrada.open(nombreArchivoEntrada);
+
+    string cadenaEntrada;
+    getline(archivoEntrada, cadenaEntrada);  /// 
+
+    archivoEntrada.close();
+
+    unordered_map<char, int> mapaFrecuencias;
+
+    for (char caracter : cadenaEntrada) {
+        mapaFrecuencias[caracter]++;
+    }
+
+    priority_queue<Nodo*, vector<Nodo*>, CompararNodos> monticuloMinimo;
+
+    for (auto entrada : mapaFrecuencias) {
+        monticuloMinimo.push(new Nodo(entrada.first, entrada.second));
+    }
+
+    while (monticuloMinimo.size() > 1) {
+        Nodo* hijoIzquierdo = monticuloMinimo.top();
+        monticuloMinimo.pop();
+
+        Nodo* hijoDerecho = monticuloMinimo.top();
+        monticuloMinimo.pop();
+
+        monticuloMinimo.push(new Nodo(hijoIzquierdo, hijoDerecho));
+    }
+
+    Nodo* raiz = monticuloMinimo.top();
+
+    unordered_map<char, string> tablaBusqueda;
+    codificar(raiz, "", tablaBusqueda);
+
+    string cadenaComprimida = comprimir(cadenaEntrada, tablaBusqueda);
+
+    nombreArchivoSalida = "comprimido" + nombreArchivoEntrada;
+
+    escribirArchivo(nombreArchivoSalida, cadenaComprimida);
+
+    cout << "Compresion completa. El archivo comprimido se ha creado como " << nombreArchivoSalida << endl;
+
+    return 0;
+}
